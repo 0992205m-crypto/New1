@@ -5,7 +5,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # تحديث الحزمة إلى إصدار v4 لتجنب مشكلة Node.js القديم
       - uses: actions/checkout@v4
       
       - name: Set up Java
@@ -14,21 +13,27 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      # تحديث حزمة فلاتر للإصدار المتوافق مع التحديثات الجديدة
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      - name: Create Flutter Project Structure if missing
+      # هذه الخطوة ستمسح أي ملفات أندرويد قديمة وتنشئ ملفات حديثة تدعم الـ v2 embedding
+      - name: Recreate Flutter Android Structure
         run: |
-          if [ ! -d "android" ]; then
-            flutter create . --platforms=android --org com.castbrowser.app
-          fi
+          rm -rf android
+          flutter create . --platforms=android --org com.castbrowser.app
 
       - name: Get Dependencies
         run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
+
+      # خطوة رفع الملف ليظهر لك في الأسفل للتحميل
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
