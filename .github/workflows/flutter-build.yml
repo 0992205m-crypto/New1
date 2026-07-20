@@ -19,11 +19,16 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # هذه الخطوة ستمسح أي ملفات أندرويد قديمة وتنشئ ملفات حديثة تدعم الـ v2 embedding
-      - name: Recreate Flutter Android Structure
+      - name: Recreate Flutter Android Project
         run: |
           rm -rf android
           flutter create . --platforms=android --org com.castbrowser.app
+
+      # سطر سحري لتعديل الـ minSdkVersion تلقائياً إلى 21 لتتوافق مع مكتبة المتصفح
+      - name: Configure Android SDK Versions
+        run: |
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle || true
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
 
       - name: Get Dependencies
         run: flutter pub get
@@ -31,7 +36,6 @@ jobs:
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
 
-      # خطوة رفع الملف ليظهر لك في الأسفل للتحميل
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
