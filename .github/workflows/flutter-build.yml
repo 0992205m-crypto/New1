@@ -19,31 +19,28 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Flutter Android Project
+      # إنشاء مشروع جديد كلياً في مجلد مؤقت لنقل ملفات الأندرويد النظيفة والجاهزة
+      - name: Generate Clean Android Structure
         run: |
-          rm -rf android
-          flutter create . --platforms=android --org com.castbrowser.app
+          mkdir temp_project
+          cd temp_project
+          flutter create --platforms=android --org com.castbrowser.app clean_app
+          cd ..
+          # نقل ملفات الأندرويد المهيأة بشكل صحيح إلى مجلد مشروعك الرئيسي
+          mv temp_project/clean_app/android .
+          rm -rf temp_project
 
-      # حقن إعدادات الـ SDK والـ Lint الصارمة بشكل مباشر في ملف التكوين لتفادي رفض البناء
-      - name: Hardcode Android SDK Versions & Lint Configurations
+      # ضبط إعدادات الـ SDK المتوافقة مع مكتبة الـ WebView تلقائياً
+      - name: Force Update Android SDK Versions
         run: |
-          cat << 'EOF' > android/local.properties
-          flutter.sdk=/opt/hostedtoolcache/flutter/stable-all/common/flutter
-          flutter.buildMode=release
-          flutter.versionName=1.0.0
-          flutter.versionCode=1
-          flutter.minSdkVersion=21
-          flutter.targetSdkVersion=34
-          flutter.compileSdkVersion=34
-          EOF
-          
-          # تعديل ملف build.gradle لتخطي فحص الأخطاء عند استخراج الـ APK
-          sed -i '/android {/a \    lintOptions {\n        checkReleaseBuilds false\n        abortOnError false\n    }' android/app/build.gradle
+          sed -i 's/minSdkVersion.*/minSdkVersion 21/g' android/app/build.gradle
+          sed -i 's/targetSdkVersion.*/targetSdkVersion 34/g' android/app/build.gradle
+          sed -i 's/compileSdkVersion.*/compileSdkVersion 34/g' android/app/build.gradle
 
       - name: Get Dependencies
         run: flutter pub get
 
-      - name: Build APK
+      - name: Build APK Final Release
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
