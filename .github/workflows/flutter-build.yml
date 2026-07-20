@@ -5,14 +5,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # تحديث الحزمة إلى إصدار v4 لتجنب مشكلة Node.js القديم
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          channel: stable 
-      - run: flutter pub get
-      - run: flutter build apk --release
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          distribution: 'zulu'
+          java-version: '17'
+
+      # تحديث حزمة فلاتر للإصدار المتوافق مع التحديثات الجديدة
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          channel: 'stable'
+          cache: true
+
+      - name: Create Flutter Project Structure if missing
+        run: |
+          if [ ! -d "android" ]; then
+            flutter create . --platforms=android --org com.castbrowser.app
+          fi
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
