@@ -10,13 +10,13 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: zulu
-          java-version: 17
+          distribution: 'zulu'
+          java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: 'stable'
           cache: true
 
       - name: Get Dependencies
@@ -25,14 +25,24 @@ jobs:
       - name: Clean Build Cache
         run: flutter clean
 
-      # هذه الخطوة البديلة والآمنة تقوم بتحديث إصدارات الـ SDK للمشروع وكل المكتبات بدون أي مشاكل في علامات التنصيص
-      - name: Set SDK Versions Globally via Flutter Config
+      # هذه الخطوة تستخدم طريقة كتابة آمنة ومضمونة لا تتأثر بمشاكل نسخ علامات التنصيص نهائياً
+      - name: Force Android SDK Versions via Gradle Configuration
         run: |
-          flutter config --android-sdk /usr/local/lib/android/sdk
-          cd android
-          echo "flutter.compileSdkVersion=34" >> local.properties
-          echo "flutter.minSdkVersion=21" >> local.properties
-          echo "flutter.targetSdkVersion=34" >> local.properties
+          echo "subprojects {" > gradle_patch.txt
+          echo "    afterEvaluate { project ->" >> gradle_patch.txt
+          echo "        if (project.hasProperty('android')) {" >> gradle_patch.txt
+          echo "            project.android {" >> gradle_patch.txt
+          echo "                compileSdkVersion 34" >> gradle_patch.txt
+          echo "                defaultConfig {" >> gradle_patch.txt
+          echo "                    minSdkVersion 21" >> gradle_patch.txt
+          echo "                    targetSdkVersion 34" >> gradle_patch.txt
+          echo "                }" >> gradle_patch.txt
+          echo "            }" >> gradle_patch.txt
+          echo "        }" >> gradle_patch.txt
+          echo "    }" >> gradle_patch.txt
+          echo "}" >> gradle_patch.txt
+          cat gradle_patch.txt >> android/build.gradle
+          rm gradle_patch.txt
 
       - name: Accept Android Licenses
         run: yes | flutter doctor --android-licenses || true
