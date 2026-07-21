@@ -10,22 +10,24 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: zulu 
+          java-version: 17 
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable 
           cache: true
 
-      # إنشاء مشروع جديد كلياً في مجلد مؤقت لنقل ملفات الأندرويد النظيفة والجاهزة
+      # إنشاء مشروع جديد كلياً وحذف المجلد القديم قبل النقل لتفادي التعارض
       - name: Generate Clean Android Structure
         run: |
           mkdir temp_project
           cd temp_project
           flutter create --platforms=android --org com.castbrowser.app clean_app
           cd ..
+          # التعديل هنا: حذف مجلد أندرويد القديم لمنع خطأ 'Directory not empty'
+          rm -rf android
           # نقل ملفات الأندرويد المهيأة بشكل صحيح إلى مجلد مشروعك الرئيسي
           mv temp_project/clean_app/android .
           rm -rf temp_project
