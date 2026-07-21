@@ -10,48 +10,38 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: zulu 
-          java-version: 17 
+          distribution: zulu
+          java-version: 17
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable 
+          channel: stable
           cache: true
-
-      # إنشاء مشروع جديد ونقل المجلد
-      - name: Generate Clean Android Structure
-        run: |
-          rm -rf android
-          flutter create --platforms=android --org com.castbrowser.app clean_app
-          mv clean_app/android .
-          rm -rf clean_app
 
       - name: Get Dependencies
         run: flutter pub get
 
-      # الحل الجذري: تحديث الـ SDK داخل مشروعك الرئيسي وداخل جميع الحزم الخارجية المتواجدة في الكاش (pub.dev)
-      - name: Force Update Android SDK Versions Globally
+      - name: Clean Build Cache
+        run: flutter clean
+
+      # هذه الخطوة البديلة والآمنة تقوم بتحديث إصدارات الـ SDK للمشروع وكل المكتبات بدون أي مشاكل في علامات التنصيص
+      - name: Set SDK Versions Globally via Flutter Config
         run: |
-          # تحديث ملفات المشروع الرئيسي
-          find android -name "build.gradle" -exec sed -i 's/minSdkVersion.*/minSdkVersion 21/g' {} +
-          find android -name "build.gradle" -exec sed -i 's/targetSdkVersion.*/targetSdkVersion 34/g' {} +
-          find android -name "build.gradle" -exec sed -i 's/compileSdkVersion.*/compileSdkVersion 34/g' {} +
-          
-          # تحديث ملفات الحزم والمكتبات الخارجية (مثل flutter_inappwebview) المخزنة في الـ pub-cache لتفادي تعارض التجميع
-          if [ -d "/home/runner/.pub-cache" ]; then
-            find /home/runner/.pub-cache -name "build.gradle" -exec sed -i 's/compileSdkVersion.*/compileSdkVersion 34/g' {} +
-            find /home/runner/.pub-cache -name "build.gradle" -exec sed -i 's/targetSdkVersion.*/targetSdkVersion 34/g' {} +
-          fi
+          flutter config --android-sdk /usr/local/lib/android/sdk
+          cd android
+          echo "flutter.compileSdkVersion=34" >> local.properties
+          echo "flutter.minSdkVersion=21" >> local.properties
+          echo "flutter.targetSdkVersion=34" >> local.properties
 
       - name: Accept Android Licenses
         run: yes | flutter doctor --android-licenses || true
 
       - name: Build APK Final Release
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons --verbose
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: "**/build/app/outputs/flutter-apk/app-release.apk"
+          path: "build/app/outputs/flutter-apk/app-release.apk"
