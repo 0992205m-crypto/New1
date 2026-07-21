@@ -19,40 +19,37 @@ jobs:
           channel: stable 
           cache: true
 
-      # إنشاء مشروع جديد ونقل محتويات مجلد الأندرويد بدقة لتفادي الأخطاء
+      # إنشاء مشروع جديد ونقل المجلد
       - name: Generate Clean Android Structure
         run: |
-          # حذف أي مجلد أندرويد قديم مسبب للتعارض أولاً
           rm -rf android
-          
-          # إنشاء تطبيق فلاتر مؤقت
           flutter create --platforms=android --org com.castbrowser.app clean_app
-          
-          # نقل مجلد android التابع للتطبيق الجديد إلى المجلد الرئيسي للمستودع
           mv clean_app/android .
-          
-          # تنظيف الملفات المؤقتة الزائدة لتهيئة البيئة
           rm -rf clean_app
-
-      # ضبط إعدادات الـ SDK مع التأكد من تعديل الملف الصحيح داخل المجلد المستهدف
-      - name: Force Update Android SDK Versions
-        run: |
-          # استخدام أمر البحث لضمان الوصول للملف وتعديله حتى لو اختلف مساره البرمجي الافتراضي
-          find android -name "build.gradle" -exec sed -i 's/minSdkVersion.*/minSdkVersion 21/g' {} +
-          find android -name "build.gradle" -exec sed -i 's/targetSdkVersion.*/targetSdkVersion 34/g' {} +
-          find android -name "build.gradle" -exec sed -i 's/compileSdkVersion.*/compileSdkVersion 34/g' {} +
 
       - name: Get Dependencies
         run: flutter pub get
 
-      # إضافة خطوة قبول تراخيص أندرويد تلقائياً (تمنع خطأ الـ Licenses الشائع في السيرفرات)
+      # الحل الجذري: تحديث الـ SDK داخل مشروعك الرئيسي وداخل جميع الحزم الخارجية المتواجدة في الكاش (pub.dev)
+      - name: Force Update Android SDK Versions Globally
+        run: |
+          # تحديث ملفات المشروع الرئيسي
+          find android -name "build.gradle" -exec sed -i 's/minSdkVersion.*/minSdkVersion 21/g' {} +
+          find android -name "build.gradle" -exec sed -i 's/targetSdkVersion.*/targetSdkVersion 34/g' {} +
+          find android -name "build.gradle" -exec sed -i 's/compileSdkVersion.*/compileSdkVersion 34/g' {} +
+          
+          # تحديث ملفات الحزم والمكتبات الخارجية (مثل flutter_inappwebview) المخزنة في الـ pub-cache لتفادي تعارض التجميع
+          if [ -d "/home/runner/.pub-cache" ]; then
+            find /home/runner/.pub-cache -name "build.gradle" -exec sed -i 's/compileSdkVersion.*/compileSdkVersion 34/g' {} +
+            find /home/runner/.pub-cache -name "build.gradle" -exec sed -i 's/targetSdkVersion.*/targetSdkVersion 34/g' {} +
+          fi
+
       - name: Accept Android Licenses
         run: yes | flutter doctor --android-licenses || true
 
       - name: Build APK Final Release
         run: flutter build apk --release --no-tree-shake-icons
 
-      # رفع الملف الناتج والتأكد من إيجاده بغض النظر عن المسارات الفرعية
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
